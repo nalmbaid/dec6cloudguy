@@ -79,7 +79,6 @@ const weatherMode = {
   18: "lightning",
   19: "lightning",
    20: "lightning"
-   
 };
 
 
@@ -153,20 +152,19 @@ function showBubble(index) {
    - blank = nothing
 --------------------------------------------------- */
 
-//stores the currently active weather div so it can be removed before creating more things later
 let activeWeather = null; 
 
 
 
 /* ---------------------------------------------------
    KEYFRAME ANIMATIONS
-       ChatGPT helped with setting this animation up - the base image for water rain is a continous pattern
+       ChatGPT helped with setting this animation up - the base image for water rain is a continous pattern and a lightning drawing
 --------------------------------------------------- */
 const style = document.createElement("style");
 style.textContent = `
 @keyframes rainScroll {
   from { background-position-y: 0; }
-  to   { background-position-y: 100%; } /* ##added full div height */
+  to   { background-position-y: -100%; } /* ##added rain scrolls downward */
 }
 
 @keyframes lightningFlash {
@@ -179,17 +177,25 @@ document.head.appendChild(style);
 
 
 
-function showWeather(mode, clickY = null) { 
+/* ---------------------------------------------------
+   WEATHER DISPLAY FUNCTION
+--------------------------------------------------- */
+function showWeather(mode, clickY = null, clickX = null) { /* ##added clickX */
   if (activeWeather) activeWeather.remove();
   if (mode === "blank") return;
+
   const div = document.createElement("div");
 
   Object.assign(div.style, {
     position: "fixed",
-    top: mode === "lightning" && clickY !== null ? clickY + "px" : "130px", 
-    right: "20px",
-    width: "120px",
-    height: "350px",
+
+    /* ##added: rain = full LENGTH only (height 100vh), not full width */
+    top: mode === "lightning" ? clickY + "px" : "0px",   /* ##added rain top */
+    left: mode === "lightning" ? clickX + "px" : "20px", /* ##added lightning x-pos; rain stays at right */
+
+    width: mode === "lightning" ? "80px" : "120px",   /* ##added lightning smaller */
+    height: mode === "lightning" ? "120px" : "100vh", /* ##added rain full LENGHT */
+
     pointerEvents: "none",
     opacity: "0",
     transition: "opacity .4s",
@@ -201,37 +207,36 @@ function showWeather(mode, clickY = null) {
   /* ---------------------------------------------------
      WATERDROP MODE
      - Repeating texture, animates smoothly down
- 
   --------------------------------------------------- */
   if (mode === "waterdrop") {
     div.style.backgroundImage = `url(${chrome.runtime.getURL("waterdrops.png")})`;
-    div.style.backgroundRepeat = "repeat";         // ##added repeat for full effect
-    div.style.backgroundSize = "120px auto";       // ##added do not stretch vertically
-    div.style.animation = "rainScroll 5s linear";  // ##added scroll animation
+    div.style.backgroundRepeat = "repeat";
+    div.style.backgroundSize = "120px auto";
+    div.style.animation = "rainScroll 5s linear infinite";
   }
 
 
 
   /* ---------------------------------------------------
      LIGHTNING MODE
-     - Appears where user clicks
+     - Appears where user clicks (x,y)
+     - Smaller box
      - Flashes using keyframes
   --------------------------------------------------- */
   if (mode === "lightning") {
     div.style.backgroundImage = `url(${chrome.runtime.getURL("lightning.png")})`;
-    div.style.backgroundSize = "cover";
+    div.style.backgroundSize = "contain"; /* ##added lightning fits smaller */
+    div.style.backgroundRepeat = "no-repeat"; /* ##added */
     div.style.animation = "lightningFlash 1s ease-in-out infinite";
   }
 
 
 
-  // Add to page and fade in
   document.body.appendChild(div);
   requestAnimationFrame(() => (div.style.opacity = "1"));
 
   activeWeather = div;
 
-  // Auto-remove
   setTimeout(() => {
     div.style.opacity = "0";
     setTimeout(() => div.remove(), 400);
@@ -277,11 +282,10 @@ document.addEventListener("click", (e) => {
     showEMS(baseImages[currentImageIndex]);
     showBubble(currentImageIndex);
 
-    // 🌧 WEATHER MODE per EMS number
     const mode = weatherMode[currentImageIndex];
-    // ##added only trigger on Add
+
     if (mode === "lightning") {
-      showWeather(mode, e.clientY); // ##added lightning appears where clicked
+      showWeather(mode, e.clientY, e.clientX); /* ##added X and Y position */
     } else {
       showWeather(mode);
     }
@@ -295,7 +299,6 @@ document.addEventListener("click", (e) => {
     currentImageIndex = Math.max(currentImageIndex - 1, 0);
     showEMS(baseImages[currentImageIndex]);
 
-    const mode = weatherMode[currentImageIndex];
     showWeather("blank"); // ##added no weather on remove
 
     localStorage.setItem("currentImageIndex", currentImageIndex);
