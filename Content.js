@@ -77,7 +77,7 @@ const weatherMode = {
    16: "lightning",
   17: "lightning",
   18: "lightning",
-  19: "lightning"
+  19: "lightning",
    20: "lightning"
    
 };
